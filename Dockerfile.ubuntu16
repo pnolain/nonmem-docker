@@ -1,0 +1,107 @@
+FROM ubuntu:16.04
+
+# Install dependencies (then clean up the image as much as possible)
+RUN apt-get update \
+    && apt-get install --yes --no-install-recommends \
+        ca-certificates \
+        gfortran \
+        libmpich-dev \
+        mpich \
+        wget \
+        unzip \
+    && rm -rf \
+        /var/lib/apt/lists/ \
+        /var/cache/apt/archives/ \
+	    /usr/share/doc/ \
+	    /usr/share/man/ \
+	    /usr/share/locale/
+
+RUN mkdir data
+
+COPY nm741CD/ /tmp/nm741CD
+
+# Install NONMEM and then clean out unnecessary files to keep image smaller
+RUN cd /tmp \
+    && cd /tmp/nm741CD \
+    && bash SETUP74 \
+        /tmp/nm741CD \
+        /opt/nm \
+        gfortran \
+        y \
+        /usr/bin/ar \
+        same \
+        rec \
+        q \
+        unzip \
+        nonmem74e.zip \
+        nonmem74r.zip \
+    && rm -r /tmp/* \
+    && rm /opt/nm/mpi/mpi_ling/libmpich.a \
+    && ln -s /usr/lib/mpich/lib/libmpich.a /opt/nm/mpi/mpi_ling/libmpich.a \
+    && (cd /opt/nm && \
+        rm -rf \
+            examples/ \
+            guides/ \
+            help/ \
+            html/ \
+            *.pdf \
+            *.txt \
+            *.zip \
+            install* \
+            nonmem.lic \
+            SETUP* \
+            unzip.SunOS \
+            unzip.exe \
+            mpi/mpi_lini \
+            mpi/mpi_wing \
+            mpi/mpi_wini \
+            run/*.bat \
+            run/*.EXE \
+            run/*.LNK \
+            run/CONTROL* \
+            run/DATA* \
+            run/REPORT* \
+            run/fpiwin* \
+            run/mpiwin* \
+            run/FCON \
+            run/FDATA \
+            run/FREPORT \
+            run/FSIZES \
+            run/FSTREAM \
+            run/FSUBS \
+            run/INTER \
+            run/computername.exe \
+            run/garbage.out \
+            run/gfortran.txt \
+            run/nmhelp.exe \
+            run/psexec.exe \
+            runfiles/GAWK.EXE \
+            runfiles/GREP.EXE \
+            runfiles/computername.exe \
+            runfiles/fpiwin* \
+            runfiles/mpiwin* \
+            runfiles/nmhelp.exe \
+            runfiles/psexec.exe \
+            util/*.bat \
+            util/*~ \
+            util/CONTROL* \
+            util/F* \
+            util/DATA3 \
+            util/ERROR1 \
+            util/INTER \
+            util/finish_Darwin* \
+            util/finish_Linux_f95 \
+            util/finish_Linux_g95 \
+            util/finish_SunOS*)
+
+ENV PATH /opt/nm/run:$PATH
+
+# link nmfe to specific version so we can use a consistent ENTRYPOINT
+RUN ln -s /opt/nm/run/nmfe74 /opt/nm/run/nmfe
+
+WORKDIR /data
+
+# expects in and out files specified at runtime
+ENTRYPOINT ["/opt/nm/run/nmfe"]
+
+CMD ["--help"] 
